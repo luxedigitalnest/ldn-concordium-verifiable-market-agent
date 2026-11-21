@@ -1,0 +1,78 @@
+{
+  "source": "Original observed CoinMarketCap Keyless Public API response, faithfully preserved from LDN CMC Market Radar",
+  "sourceUrl": "https://github.com/luxedigitalnest/ldn-cmc-market-radar/blob/main/examples/live_10_coinmarketcap_2026-11-20.json",
+  "observedAt": "2026-11-20T14:26:22.165Z",
+  "live": false,
+  "assets": [
+    {
+      "rank": 1,
+      "name": "Bitcoin",
+      "symbol": "BTC",
+      "priceUSD": 61993.04953088309,
+      "change24h": -2.866769671533
+    },
+    {
+      "rank": 2,
+      "name": "Ethereum",
+      "symbol": "ETH",
+      "priceUSD": 1753.4481294240948,
+      "change24h": -2.922694404299
+    },
+    {
+      "rank": 3,
+      "name": "Tether USDt",
+      "symbol": "USDT",
+      "priceUSD": 0.9989606426139941,
+      "change24h": 0.008791041147
+    },
+    {
+      "rank": 4,
+      "name": "BNB",
+      "symbol": "BNB",
+      "priceUSD": 569.972930195189,
+      "change24h": -3.746893046857
+    },
+    {
+      "rank": 5,
+      "name": "USDC",
+      "symbol": "USDC",
+      "priceUSD": 0.9998825309929522,
+      "change24h": 0.009574471942
+    },
+    {
+      "rank": 6,
+      "name": "XRP",
+      "symbol": "XRP",
+      "priceUSD": 0.9501251766481521,
+      "change24h": -4.059058233177
+    },
+    {
+      "rank": 7,
+      "name": "Solana",
+      "symbol": "SOL",
+      "priceUSD": 71.42511770880346,
+      "change24h": -4.798383063676
+    },
+    {
+      "rank": 8,
+      "name": "TRON",
+      "symbol": "TRX",
+      "priceUSD": 0.30551159067711303,
+      "change24h": -2.15499523816
+    },
+    {
+      "rank": 9,
+      "name": "Hyperliquid",
+      "symbol": "HYPE",
+      "priceUSD": 63.267057764085415,
+      "change24h": -7.613974722132
+    },
+    {
+      "rank": 10,
+      "name": "Zcash",
+      "symbol": "ZEC",
+      "priceUSD": 818.3748486544548,
+      "change24h": -13.28933022056
+    }
+  ]
+}
