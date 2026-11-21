@@ -1,0 +1,38 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {INDEXER,DEFAULT_NETWORK,SAMPLE_TESTNET_TOKEN,parseToken,normalizeHexHash,sha256,evaluateRegistryEvidence,marketBreadth,makeReport} from '../docs/trust.js';
+import {readFileSync} from 'node:fs';
+import {webcrypto} from 'node:crypto';
+if(!globalThis.crypto?.subtle)globalThis.crypto=webcrypto;
+const NOW=Date.parse('2026-11-21T13:05:00.000Z');
+const SAME_HEX='2'.repeat(64);
+const rec={network:'testnet',token_id:1375,status:'Active',agent_uri:'https://raw.githubusercontent.com/legitimate/card.json',metadata_hash_hex:SAME_HEX,owner_account:'3hurAcgoAiabk9VR5FqNaUySxW739FG2PcwnmWuhHp8D6jgNFY',agent_wallet:null};
+const okHealth={networks:{testnet:{lag_blocks:0,last_synced_at:'2026-11-21T13:04:42.000Z',chain_height:51103845}}};
+const decide=(r=rec,extra={})=>evaluateRegistryEvidence({network:'testnet',record:r,health:okHealth,cardHash:SAME_HEX,now:NOW,...extra});
+
+test('official registry URL and sample are explicitly testnet, not LDN identity',()=>{
+ assert.equal(INDEXER,'https://agent-registry-indexer.concordium.com');
+ assert.equal(DEFAULT_NETWORK,'testnet');assert.equal(SAMPLE_TESTNET_TOKEN,1375);
+ const docs=readFileSync(new URL('../docs/index.html',import.meta.url),'utf8');
+ assert.match(docs,/THIRD-PARTY agent/);assert.match(docs,/not operated or registered by LuxeDigitalNest/);
+});
+test('accepts only safe numeric token IDs',()=>{assert.equal(parseToken('1375'),1375);assert.equal(parseToken('0'),0);for(const v of ['-1','1.3','1e6','foo','99999999999999999999','01'])assert.throws(()=>parseToken(v));});
+test('validates and normalizes SHA256 commitments',()=>{assert.equal(normalizeHexHash('0x'+'A'.repeat(64)),'a'.repeat(64));assert.throws(()=>normalizeHexHash('abc'));});
+test('computes actual WebCrypto SHA256 of exact bytes',async()=>{assert.equal(await sha256(new TextEncoder().encode('abc')),'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');});
+test('authenticated-looking record needs active status, matching hash, fresh indexer',()=>{const d=decide();assert.equal(d.accepted,true);assert.equal(d.trustLevel,'registry-record-and-card-integrity-verified');});
+test('registered record with wrong hash fails closed',()=>{assert.equal(decide(rec,{cardHash:'0'.repeat(64)}).accepted,false);});
+test('revoked agent is not trusted even if its card hash matches',()=>{assert.equal(decide({...rec,status:'Revoked'}).accepted,false);});
+test('wrong chain record cannot masquerade as testnet registration',()=>{assert.equal(decide({...rec,network:'mainnet'}).accepted,false);});
+test('HTTPS-only Agent Card requirement fails insecure URL',()=>{assert.equal(decide({...rec,agent_uri:'http://example.com/card.json'}).accepted,false);});
+test('missing Concordium account cannot pass',()=>{assert.equal(decide({...rec,owner_account:''}).accepted,false);});
+test('no indexer state fails closed',()=>{assert.equal(decide(rec,{health:null}).accepted,false);});
+test('indexer lag over 32 blocks rejects stale network state',()=>{assert.equal(decide(rec,{health:{networks:{testnet:{lag_blocks:33,last_synced_at:'2026-11-21T13:04:42Z'}}}}).accepted,false);});
+test('sync timestamp 30 minutes stale rejects',()=>{assert.equal(decide(rec,{health:{networks:{testnet:{lag_blocks:0,last_synced_at:'2026-11-21T12:30:00Z'}}}}).accepted,false);});
+test('missing card metadata hash fails closed',()=>{assert.equal(decide({...rec,metadata_hash_hex:null}).accepted,false);});
+test('unclear wallet is a warning, not a false verified payment identity',()=>{const d=decide();assert.equal(d.accepted,true);assert.ok(d.warnings.some(w=>w.includes('wallet')));});
+test('market breadth excludes USDT and USDC and tracks sample only',()=>{const a=marketBreadth([{symbol:'BTC',change24h:-3},{symbol:'USDT',change24h:0.1},{symbol:'ETH',change24h:5},{symbol:'USDC',change24h:0.2},{symbol:'SOL',change24h:0}]);assert.deepEqual(a,{sampleCount:3,rising:1,declining:1,unchanged:1,medianChange24h:0,sampleUpShare:1/3});});
+test('empty source market sample is invalid',()=>{assert.throws(()=>marketBreadth([]));});
+test('market reports fail closed unless identity registry check passes',()=>{assert.throws(()=>makeReport({trust:{accepted:false},assets:[{symbol:'BTC',change24h:1}],source:'x',observedAt:'2026-11-20T14:26:22Z'}));});
+test('accepted report preserves historical observation timestamp and provenance',()=>{const x=makeReport({trust:decide(),assets:[{symbol:'BTC',change24h:-3},{symbol:'ETH',change24h:1}],source:'CMC historical',observedAt:'2026-11-20T14:26:22.165Z'});assert.equal(x.medianChange24h,-1);assert.equal(x.source,'CMC historical');assert.equal(x.observedAt,'2026-11-20T14:26:22.165Z');assert.match(x.disclaimer,/not a forecast/);});
+test('web UI has no wallet access, transfer, sign, or agent spoofing code',()=>{const app=readFileSync(new URL('../docs/app.js',import.meta.url),'utf8');for(const banned of ['eth_sendTransaction','eth_requestAccounts','wallet_switchEthereumChain','window.ethereum','privateKey','mintBadge','signTransaction'])assert.equal(app.includes(banned),false,banned);assert.match(app,/sha256/);assert.match(app,/fail/);});
+test('historical fixture has date, ten public source assets and no private keys',()=>{const doc=JSON.parse(readFileSync(new URL('../docs/market-sample.json',import.meta.url),'utf8'));assert.equal(doc.live,false);assert.equal(doc.assets.length,10);assert.equal(doc.observedAt,'2026-11-20T14:26:22.165Z');assert.ok(doc.assets.every(a=>typeof a.symbol==='string'));});
