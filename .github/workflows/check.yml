@@ -1,0 +1,23 @@
+name: Concordium Agent Trust Gate CI
+on:
+  push:
+    paths:
+      - "docs/**"
+      - "src/**"
+      - "tests/**"
+      - "package.json"
+      - ".github/workflows/check.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute trust and negative-case tests
+        run: npm test
