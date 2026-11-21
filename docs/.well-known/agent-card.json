@@ -1,0 +1,40 @@
+{
+  "name": "LDN Verifiable Market Agent",
+  "description": "Read-only public web prototype that independently hashes Concordium CIS-8004 Agent Cards and requires an Active, recent registry record before displaying a dated CoinMarketCap market-breadth sample. Not an autonomous trading agent. This card is NOT YET registered on-chain; our own Concordium agent registration and credential proof are pending.",
+  "version": "0.1.0",
+  "url": "https://luxedigitalnest.github.io/ldn-concordium-verifiable-market-agent/.well-known/agent-card.json",
+  "provider": {
+    "organization": "LuxeDigitalNest",
+    "url": "https://github.com/luxedigitalnest"
+  },
+  "skills": [
+    {
+      "id": "verify-concordium-agent",
+      "name": "Verify Concordium registry and card integrity",
+      "description": "Inspect a public CIS-8004 agent on Concordium testnet or mainnet; check status, indexer sync lag, Agent Card URL, and a browser-computed SHA-256 of fetched bytes against the registry commitment.",
+      "tags": [
+        "concordium",
+        "cis-8004",
+        "identity",
+        "integrity"
+      ]
+    },
+    {
+      "id": "historical-crypto-market-breadth",
+      "name": "Gate a historical market-breadth report by agent integrity",
+      "description": "Show source-attributed November 20 2026 CoinMarketCap top-10 sample market metrics only after a third-party sample agent's registry and card match. This is historical, not live price trading or autonomous execution.",
+      "tags": [
+        "market",
+        "coinmarketcap",
+        "provenance",
+        "read-only"
+      ]
+    }
+  ],
+  "documentationUrl": "https://github.com/luxedigitalnest/ldn-concordium-verifiable-market-agent",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false
+  },
+  "registrationStatus": "unregistered-prototype-do-not-treat-as-concordium-badge"
+}
