@@ -1,0 +1,80 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LDN Verifiable Market Agent — Concordium trust gate</title>
+<meta name="description" content="A real read-only Concordium CIS-8004 agent card integrity verifier and fail-closed historical market report demo. No wallet or payments.">
+<style>
+:root{color-scheme:dark;--bg:#07101e;--panel:#12243c;--border:#36536b;--accent:#71e5cb;--light:#f3faff;--sub:#b8cbde;--bad:#ff9999;--amber:#ffd38d}*{box-sizing:border-box}
+body{margin:0;font:16px/1.6 system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 90% 0%,#1a3c51,transparent 52%),var(--bg);color:var(--light)}
+a{color:var(--accent);text-underline-offset:3px}
+a:focus-visible,input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.skip{position:absolute;top:-90px;padding:12px;background:var(--light);color:#111}.skip:focus{top:4px;left:4px}
+.wrap{max-width:1090px;margin:0 auto;padding:0 24px}
+header{display:flex;gap:25px;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding:22px 0}
+header strong{font-size:15px;letter-spacing:.13em}.tag{padding:7px 13px;border-radius:40px;color:var(--accent);border:1px solid #33677e;font-size:13px;font-weight:700}
+.hero{padding:72px 0 35px}.eyebrow{color:var(--accent);font-size:13px;letter-spacing:.15em;font-weight:800}
+h1{font-size:clamp(38px,6vw,69px);line-height:1.08;letter-spacing:-.05em;margin:13px 0 25px;max-width:840px}
+.hero p{font-size:19px;color:var(--sub);max-width:825px}
+.panel{border:1px solid var(--border);border-radius:18px;background:linear-gradient(135deg,#172b43,#0d1b31);padding:26px;margin:19px 0}
+h2{font-size:29px;letter-spacing:-.03em;margin:26px 0 16px}h3{font-size:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+kbd,code{font-family:ui-monospace,Consolas,monospace}
+label{display:block;font-weight:700;margin:12px 0 6px}
+input,select{width:100%;max-width:350px;padding:13px 15px;font-size:17px;border-radius:11px;background:#061224;color:#fff;border:1px solid #526e8e}
+button{cursor:pointer;font:inherit;font-weight:800;padding:12px 18px;border-radius:11px;border:0;background:var(--accent);color:#092237}
+button:disabled{opacity:.45;cursor:wait}
+button.secondary{background:#2f4565;color:white}
+.muted{color:var(--sub)}
+.verdict{font-weight:750;padding:18px;background:#1d304b;border-left:4px solid #a3bee6;border-radius:8px}
+.verdict[data-status=pass]{border-left-color:var(--accent);background:#133a37}.verdict[data-status=fail]{border-left-color:var(--bad);background:#40282f}
+.verdict[data-status=pending]{border-left-color:var(--amber)}
+dl{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:15px}
+dt{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--sub)}
+dd{margin:4px 0 0;overflow-wrap:anywhere}
+.mono{font:14px/1.55 ui-monospace,Consolas,monospace;overflow-wrap:anywhere}
+pre{white-space:pre-wrap;word-break:break-word;line-height:1.8;padding:20px;border:1px solid var(--border);border-radius:12px;background:#071525}
+.notice{border-left:4px solid var(--amber);padding:18px 20px;background:#302c35}
+footer{margin:65px 0 25px;border-top:1px solid var(--border);padding:26px 0;color:var(--sub);font-size:14px}
+@media(max-width:730px){.grid,dl{grid-template-columns:1fr}header{flex-direction:column;align-items:flex-start}.hero{padding-top:38px}.panel{padding:18px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style></head><body>
+<a class="skip" href="#main">Skip to main content</a>
+<div class="wrap">
+<header><strong>LUXEDIGITALNEST / <span style="color:var(--accent)">CONCORDIUM</span></strong><span class="tag">Public testnet · Read-only · Free</span></header>
+<main id="main">
+<section class="hero"><div class="eyebrow">VERIFIABLE MARKET AGENT / REGISTERED ENCODE CLUB PROJECT</div>
+<h1>Check an agent’s on-chain record <em>before</em> trusting its market report.</h1>
+<p>A working trust gate for crypto-analysis workflows. It checks Concordium CIS-8004 agent registration, indexer synchronization and the exact SHA-256 bytes of the publicly hosted Agent Card. Only after those checks pass can the demonstrator produce a source-attributed, clearly historical market brief.</p>
+<p class="tag" style="display:inline-block">No wallet needed · No private keys · No token transfers</p>
+</section>
+<div class="notice" role="note"><strong>Ownership disclosure:</strong> The default testnet agent <code>#1375</code> is a real independently registered THIRD-PARTY agent used as public test data; it is not operated or registered by LuxeDigitalNest. This app demonstrates on-chain-derived trust checks; our own agent registration and an originating CCD transaction are still pending. An active registry entry does not certify financial accuracy or the human's legal identity.</div>
+<section aria-labelledby="check-title" class="panel"><h2 id="check-title">1. Verify a real CIS-8004 agent</h2>
+<div class="grid">
+<div><label for="network">Concordium network</label><select id="network"><option value="testnet">Testnet</option><option value="mainnet">Mainnet</option></select><p class="muted">Default sample is from TESTNET, not LDN's own account.</p></div>
+<div><label for="token">CIS-8004 registry token ID</label><input id="token" value="1375" inputmode="numeric" autocomplete="off" spellcheck="false"><p class="muted">Change the ID to inspect a different public registry record.</p></div>
+</div>
+<p><button id="verify" type="button">Verify on Concordium</button></p>
+<div class="verdict" id="verdict" data-status="pending" role="status" aria-live="polite">Checking the official registry…</div>
+</section>
+<section id="details" hidden aria-labelledby="evidence-title">
+<h2 id="evidence-title">2. Independently inspect the evidence</h2>
+<div class="panel"><dl>
+<div><dt>Network</dt><dd id="chain"></dd></div>
+<div><dt>Agent registration</dt><dd id="agentName"></dd></div>
+<div><dt>Concordium owner account (public)</dt><dd class="mono" id="owner"></dd></div>
+<div><dt>Registration timestamp</dt><dd id="registeredAt"></dd></div>
+<div><dt>Indexer chain height</dt><dd id="chainHeight"></dd></div>
+<div><dt>Indexer lag</dt><dd id="lag"></dd></div>
+<div><dt>Last indexed block time</dt><dd id="synced"></dd></div>
+<div><dt>Public Agent Card</dt><dd><a id="cardUrl" target="_blank" rel="noopener noreferrer"></a></dd></div>
+<div><dt>Registry-committed SHA-256</dt><dd class="mono" id="expectedHash"></dd></div>
+<div><dt>Actual downloaded-byte SHA-256</dt><dd class="mono" id="actualHash"></dd></div>
+</dl><p class="muted">Source: <a href="https://agent-registry-indexer.concordium.com/status" target="_blank" rel="noopener noreferrer">Official Agent Registry Indexer sync status</a>. We independently hash the fetched card using the browser's Web Crypto API. The registry indexer is chain-derived and a separate network-trust dependency; this demonstration does not directly perform raw node smart-contract reads.</p></div></section>
+<section class="panel" aria-labelledby="report-title"><h2 id="report-title">3. Generate the gated market brief</h2>
+<p>Market analysis remains blocked until a live registry record passes all integrity and freshness checks. The market data below is a **faithfully recorded CoinMarketCap snapshot from November 20, 2026**, not a live feed.</p>
+<button id="report" type="button" disabled>Generate verified-gated historical brief</button>
+<div id="reportOutput" hidden><h3>Source-attributed historical analysis</h3><pre id="brief" role="status" aria-live="polite"></pre></div></section>
+<section class="grid" aria-label="Why Concordium"><article class="panel"><h2>What the registry proves</h2><p>An on-chain CIS-8004 agent entry exists; the indexer reports it Active; a posted Agent Card’s SHA-256 matches its committed hash; and the indexer is close to the chain tip. An agent can still be malicious, inaccurate, revoked later, or impersonated outside the contract context.</p><a href="https://docs.concordium.com/en/mainnet/technical-reference/agent-registry/cis-8004.html">Official CIS-8004 docs</a></article>
+<article class="panel"><h2>What remains to ship</h2><p>Register LDN’s own Agent Card using a genuine Concordium account and test CCD; collect the official testnet explorer transaction; add authenticated agent-to-agent provenance and a payment demonstration where available; produce a genuine sub-3-minute walkthrough; submit before December 9.</p><a href="https://www.encodeclub.com/my-programmes/concordium-trusted-agents-hackathon">Our registered Encode Club project</a></article></section>
+<section class="panel"><h2>Open-source reproducibility</h2><p>Apache-2.0 code, actual Node test suite, browser verification and clear negative tests are on <a href="https://github.com/luxedigitalnest/ldn-concordium-verifiable-market-agent">GitHub</a>. The historical market sample comes from our previous <a href="https://github.com/luxedigitalnest/ldn-cmc-market-radar">original CMC Market Radar repository</a>; it is separate from any new agent registration.</p><p class="muted">No identity verification was requested from a human. Do not treat registry status as proof of a market forecast or regulatory approval.</p></section>
+</main><footer>LDN Verifiable Market Agent · Unpaid independent prototype · No wallet, accounts, trackers, payments, cookies, or financial transactions · Not financial advice.</footer>
+</div><script type="module" src="./app.js"></script></body></html>
