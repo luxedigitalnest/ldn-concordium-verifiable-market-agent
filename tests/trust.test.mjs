@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {INDEXER,DEFAULT_NETWORK,SAMPLE_TESTNET_TOKEN,parseToken,normalizeHexHash,sha256,evaluateRegistryEvidence,marketBreadth,makeReport} from '../docs/trust.js';
+import {INDEXER,DEFAULT_NETWORK,SAMPLE_TESTNET_TOKEN,parseToken,normalizeHexHash,sha256,evaluateRegistryEvidence,marketBreadth,makeReport,safeAgentCardUrl,registrySelectionIsCurrent} from '../docs/trust.js';
 import {readFileSync} from 'node:fs';
 import {webcrypto} from 'node:crypto';
 if(!globalThis.crypto?.subtle)globalThis.crypto=webcrypto;
@@ -36,3 +36,9 @@ test('market reports fail closed unless identity registry check passes',()=>{ass
 test('accepted report preserves historical observation timestamp and provenance',()=>{const x=makeReport({trust:decide(),assets:[{symbol:'BTC',change24h:-3},{symbol:'ETH',change24h:1}],source:'CMC historical',observedAt:'2026-11-20T14:26:22.165Z'});assert.equal(x.medianChange24h,-1);assert.equal(x.source,'CMC historical');assert.equal(x.observedAt,'2026-11-20T14:26:22.165Z');assert.match(x.disclaimer,/not a forecast/);});
 test('web UI has no wallet access, transfer, sign, or agent spoofing code',()=>{const app=readFileSync(new URL('../docs/app.js',import.meta.url),'utf8');for(const banned of ['eth_sendTransaction','eth_requestAccounts','wallet_switchEthereumChain','window.ethereum','privateKey','mintBadge','signTransaction'])assert.equal(app.includes(banned),false,banned);assert.match(app,/sha256/);assert.match(app,/fail/);});
 test('historical fixture has date, ten public source assets and no private keys',()=>{const doc=JSON.parse(readFileSync(new URL('../docs/market-sample.json',import.meta.url),'utf8'));assert.equal(doc.live,false);assert.equal(doc.assets.length,10);assert.equal(doc.observedAt,'2026-11-20T14:26:22.165Z');assert.ok(doc.assets.every(a=>typeof a.symbol==='string'));});
+
+test('rejects credential-bearing or malformed HTTPS card URI',()=>{for(const u of ['https://user:pass@example.com/card','https://','https://example.com/card#fragment',null])assert.throws(()=>safeAgentCardUrl(u));assert.equal(decide({...rec,agent_uri:'https://user@example.com/card'}).accepted,false);});
+test('rejects non-string and malformed owner account',()=>{for(const v of [123456789012345678901234,{},'x'.repeat(20),'0'.repeat(50)])assert.equal(decide({...rec,owner_account:v}).accepted,false);});
+test('future indexer timestamps outside one-minute tolerance fail',()=>{assert.equal(decide(rec,{health:{networks:{testnet:{lag_blocks:0,last_synced_at:'2026-11-21T13:07:00Z'}}}}).accepted,false);});
+test('report gate binds verification to selection and expiry',()=>{const trust=decide();const args={trust,network:'testnet',token:1375,selectedNetwork:'testnet',selectedToken:'1375',now:NOW};assert.equal(registrySelectionIsCurrent(args),true);assert.equal(registrySelectionIsCurrent({...args,selectedNetwork:'mainnet'}),false);assert.equal(registrySelectionIsCurrent({...args,selectedToken:'1376'}),false);assert.equal(registrySelectionIsCurrent({...args,selectedToken:''}),false);assert.equal(registrySelectionIsCurrent({...args,now:trust.expiresAt}),false);});
+test('null and string percentage changes cannot be fabricated as zero or numeric',()=>{const result=marketBreadth([{symbol:'BTC',change24h:2},{symbol:'ETH',change24h:null},{symbol:'SOL',change24h:'3'}]);assert.equal(result.sampleCount,1);assert.equal(result.medianChange24h,2);});
