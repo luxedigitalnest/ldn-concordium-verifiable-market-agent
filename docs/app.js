@@ -1,10 +1,17 @@
-import {INDEXER,ALLOWED_NETWORKS,SAMPLE_TESTNET_TOKEN,parseToken,sha256,evaluateRegistryEvidence,makeReport} from './trust.js';
+import {INDEXER,ALLOWED_NETWORKS,SAMPLE_TESTNET_TOKEN,parseToken,sha256,evaluateRegistryEvidence,makeReport,safeAgentCardUrl,registrySelectionIsCurrent} from './trust.js';
 const $=id=>document.getElementById(id);
-const state={trust:null,agent:null,health:null,sample:null,network:'testnet',token:SAMPLE_TESTNET_TOKEN};
+const state={trust:null,agent:null,health:null,sample:null,network:'testnet',token:SAMPLE_TESTNET_TOKEN,revision:0};
+function selectionCurrent(){return registrySelectionIsCurrent({trust:state.trust,network:state.network,token:state.token,selectedNetwork:$('network').value,selectedToken:$('token').value});}
+function invalidateTrust(){
+ state.revision++;state.trust=null;state.agent=null;state.health=null;
+ $('report').disabled=true;$('reportOutput').hidden=true;$('details').hidden=true;
+ $('verdict').dataset.status='pending';say('verdict','Selection changed. Verify the selected agent again.');
+}
 function say(id,message){$(id).textContent=String(message)}
 function toSafe(s){return String(s??'').slice(0,400);}
 async function fetchJson(url,signal){const response=await fetch(url,{signal,cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status+' from '+new URL(url).hostname);return response.json();}
 async function checkRegistry(){
+ const revision=++state.revision;
  $('verify').disabled=true;
  $('report').disabled=true;
  state.trust=null;state.agent=null;
@@ -23,13 +30,14 @@ async function checkRegistry(){
   ]);
   if(indexed.network!==network || indexed.agent?.token_id!==token)throw Error('Indexer returned an unexpected network/token');
   const agent=indexed.agent;
-  if(!agent?.agent_uri||!/^https:\/\//i.test(agent.agent_uri))throw Error('Agent Card URL missing or unsafe');
-  const cardResponse=await fetch(agent.agent_uri,{signal:controller.signal,cache:'no-store'});
+  const uri=safeAgentCardUrl(agent?.agent_uri);
+  const cardResponse=await fetch(uri,{signal:controller.signal,cache:'no-store',credentials:'omit',redirect:'error'});
   if(!cardResponse.ok)throw Error('Agent Card fetch returned HTTP '+cardResponse.status);
   const raw=await cardResponse.arrayBuffer();
   if(raw.byteLength===0 || raw.byteLength>128_000)throw Error('Agent Card is empty or too large for safe verifier');
   const cardHash=await sha256(raw);
   const decision=evaluateRegistryEvidence({network,record:agent,health,cardHash});
+  if(revision!==state.revision)return;
   state.agent=agent;state.health=health;state.trust=decision;state.network=network;state.token=token;
   say('chain',network.toUpperCase());
   say('agentName','Registry #'+token+' · '+(agent.status||'Unknown'));
@@ -44,21 +52,24 @@ async function checkRegistry(){
   const v=decision.accepted;
   $('verdict').dataset.status=v?'pass':'fail';
   say('verdict',v?
-   'VERIFIED: Active CIS-8004 indexer record, recent testnet sync and an exact SHA-256 match for the fetched Agent Card. This does NOT establish verified human identity or our ownership of this agent.':
+   'VERIFIED: Active CIS-8004 indexer record, recent selected-network sync and an exact SHA-256 match for the fetched Agent Card. This does NOT establish verified human identity or our ownership of this agent.':
    'NOT VERIFIED: '+decision.failures.join(' · '));
   $('details').hidden=false;
   $('report').disabled=!v;
  }catch(e){
+  if(revision!==state.revision)return;
   $('verdict').dataset.status='fail';
   say('verdict','NOT VERIFIED: '+toSafe(e.message||e)+'. Fail closed: market report generation disabled.');
   $('details').hidden=true;
  }finally{clearTimeout(cancel);$('verify').disabled=false;}
 }
 async function generateReport(){
- if(!state.trust?.accepted){say('brief','Not generated: no verified agent card');return;}
+ if(!selectionCurrent()){invalidateTrust();say('verdict','Verification expired or selection changed. Verify the selected agent again.');return;}
+ const revision=state.revision;
  $('report').disabled=true;
  try{
   state.sample=state.sample||await fetchJson('./market-sample.json');
+  if(revision!==state.revision||!selectionCurrent()){if(revision===state.revision)invalidateTrust();return;}
   const metrics=makeReport({trust:state.trust,assets:state.sample.assets,source:state.sample.source,observedAt:state.sample.observedAt});
   say('brief','Historical CMC sample · '+new Date(metrics.observedAt).toUTCString()+
    '\nCoins excluding listed stablecoins: '+metrics.sampleCount+
@@ -69,9 +80,11 @@ async function generateReport(){
    '\nTrust policy: live Concordium '+state.network+' agent #'+state.token+' checked before generating.'+
    '\nIMPORTANT: historical replay only; no current pricing, identity assertion, trading suggestion or forecast.');
   $('reportOutput').hidden=false;
- }catch(e){say('brief','Report unavailable: '+toSafe(e.message));$('reportOutput').hidden=false;}
- finally{$('report').disabled=false;}
+ }catch(e){if(revision===state.revision){say('brief','Report unavailable: '+toSafe(e.message));$('reportOutput').hidden=false;}}
+ finally{$('report').disabled=!selectionCurrent();}
 }
+$('network').addEventListener('change',invalidateTrust);
+$('token').addEventListener('input',invalidateTrust);
 $('verify').addEventListener('click',checkRegistry);
 $('report').addEventListener('click',generateReport);
 $('token').value=String(SAMPLE_TESTNET_TOKEN);

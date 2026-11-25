@@ -40,13 +40,21 @@ npm test
 
 Public HTTP(S) data sources: `GET https://agent-registry-indexer.concordium.com/status` and `/agents/{token}?network=testnet` plus the exact hosted Agent Card. The UI uses no-wallet, no-payments read-only `fetch`.
 
-## Existing linked wallet — critical network mismatch
+## Testnet registration checkpoint — November 25, 2026
+
+The previously linked wallet is now connected to **Testnet** in the official Agent Registry. The authenticated `My Agents` filter reports no deployed agents for the existing account ending in `P3QK6x9i`. The native registration wizard was restored to **Step 4 of 4 — Link Key** using the [Testnet pre-registration card](https://raw.githubusercontent.com/luxedigitalnest/ldn-concordium-verifiable-market-agent/strict-registry-evidence-gate/docs/.well-known/testnet-agent-card-v1.json). The earlier raw-byte check recorded SHA-256 `61990913f0daf5a0fcd9bd8345d197ee875c2f37b1a20f30083cebedeffc89d8`.
+
+**No registration transaction has been signed or confirmed.** The owner must review the actual Testnet invocation, network and fee in the wallet. The previous draft-branch trust and negative-case CI job [45511591169](https://github.com/luxedigitalnest/ldn-concordium-verifiable-market-agent/actions/runs/45511591169) completed successfully. That run is evidence for its own commit, not for subsequent revisions.
+
+After a successful registration, independently verify the actual token, owner, status, metadata URI, raw-byte hash and explorer receipt. Update the token-bound card only using those verified values; do not substitute the historical third-party demonstration agent.
+
+## Historical linked-wallet network mismatch (resolved for Testnet access; registration pending)
 
 The authenticated Agent Registry dashboard showed a **connected Concordium Mainnet** account ending in `xixhX8Cj`. The `My Agents` section had **no agents** on Mainnet. The user is working toward a **free Testnet hackathon proof**, so do NOT sign a transaction on Mainnet as a substitute.
 
 The official browser-wallet documentation says Mainnet and Testnet are **distinct wallet account/identity namespaces** and that the network must be changed under wallet extension **Menu → Network → Testnet**; the website's network selector is disabled while a wallet session is connected. The Mainnet connection did not automatically provide a Testnet account.
 
-Once the wallet is on Testnet, the complete free path is:
+The original checklist below remains applicable; steps 1–2 are now verified for the existing Testnet wallet. Registration and its fee are still pending:
 
 1. Open the official [testnet Agent Registry](https://testnet-agent-registry.concordium.com/dashboard) and connect the existing wallet on Testnet; note the new native owner address.
 2. Verify `My Agents` shows no existing entry for LDN before minting, to avoid duplicates.

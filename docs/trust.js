@@ -13,6 +13,17 @@ export function parseToken(input) {
   if(!Number.isSafeInteger(n))throw new Error('Token ID exceeds safe JavaScript integer');
   return n;
 }
+export function safeAgentCardUrl(value){
+  if(typeof value!=='string')throw Error('Agent Card URI must be a string');
+  let uri;
+  try{uri=new URL(value);}catch{throw Error('Malformed Agent Card URI');}
+  if(uri.protocol!=='https:'||uri.username||uri.password||!uri.hostname||uri.hash)throw Error('Agent Card URI must use HTTPS without credentials or fragment');
+  return uri.href;
+}
+export function registrySelectionIsCurrent({trust,network,token,selectedNetwork,selectedToken,now=Date.now()}){
+  if(trust?.accepted!==true||network!==selectedNetwork||!Number.isFinite(now)||!Number.isFinite(trust.expiresAt)||now>=trust.expiresAt)return false;
+  try{return token===parseToken(selectedToken);}catch{return false;}
+}
 export function normalizeHexHash(hash){
   if(typeof hash!=='string'|| !/^(0x)?[0-9a-fA-F]{64}$/.test(hash)) throw new Error('Missing or malformed 32-byte registry metadata hash');
   return hash.toLowerCase().replace(/^0x/,'');
@@ -30,20 +41,20 @@ export function evaluateRegistryEvidence({network,record,health,cardHash,now=Dat
   if(record?.status!=='Active')failures.push('Agent status is not Active');
   try{if(normalizeHexHash(record?.metadata_hash_hex)!==normalizeHexHash(cardHash))failures.push('Fetched Agent Card hash does not match registry commitment');}
   catch(e){failures.push(e.message);}
-  if(!record?.agent_uri||!/^https:\/\//i.test(record.agent_uri))failures.push('Missing HTTPS Agent Card URI');
-  if(!record?.owner_account||String(record.owner_account).length<20)failures.push('No usable Concordium owner account evidence');
+  try{safeAgentCardUrl(record?.agent_uri);}catch(e){failures.push(e.message);}
+  if(typeof record?.owner_account!=='string'||!/^[1-9A-HJ-NP-Za-km-z]{48,52}$/.test(record.owner_account))failures.push('No structurally usable Concordium owner account evidence');
   const chain=health?.networks?.[network];
   if(!chain||!Number.isInteger(chain.lag_blocks)||chain.lag_blocks<0||chain.lag_blocks>maxIndexerLag)failures.push('Indexer is unavailable or too far behind the chain');
   const checked=Date.parse(chain?.last_synced_at||'');
-  if(!Number.isFinite(checked)||Math.abs(now-checked)>maxStaleMs)failures.push('Indexer sync evidence is stale');
+  if(!Number.isFinite(now)||!Number.isFinite(checked)||checked>now+60_000||now-checked>=maxStaleMs)failures.push('Indexer sync evidence is stale or unexpectedly future-dated');
   if(!record?.agent_wallet)warnings.push('No public agent wallet registered (not required for core identity check)');
-  return {accepted:failures.length===0,failures,warnings,trustLevel:failures.length===0?'registry-record-and-card-integrity-verified':'not-verified'};
+  return {accepted:failures.length===0,failures,warnings,expiresAt:failures.length===0?Math.min(now,checked)+maxStaleMs:null,trustLevel:failures.length===0?'registry-record-and-card-integrity-verified':'not-verified'};
 }
 export function marketBreadth(assets){
   if(!Array.isArray(assets)||assets.length===0)throw new Error('No source assets supplied');
   const STABLE=new Set(['USDT','USDC','DAI','FDUSD','TUSD','USDE','PYUSD']);
   const nonStable=assets.filter(a=>a && typeof a.symbol==='string' && !STABLE.has(a.symbol.toUpperCase()));
-  const changes=nonStable.map(a=>Number(a.change24h)).filter(x=>Number.isFinite(x) && x>-1000 && x<10000);
+  const changes=nonStable.map(a=>a.change24h).filter(x=>typeof x==='number' && Number.isFinite(x) && x>-1000 && x<10000);
   if(!changes.length)throw new Error('No valid non-stable percentage changes');
   const rising=changes.filter(x=>x>0).length;
   const declining=changes.filter(x=>x<0).length;
@@ -53,7 +64,7 @@ export function marketBreadth(assets){
   return {sampleCount:sorted.length,rising,declining,unchanged:sorted.length-rising-declining,medianChange24h:median,sampleUpShare:rising/sorted.length};
 }
 export function makeReport({trust,assets,source,observedAt}){
- if(!trust?.accepted)throw new Error('Fail closed: market report requires a verified agent registry record + matching Agent Card hash');
+ if(trust?.accepted!==true)throw new Error('Fail closed: market report requires a verified agent registry record + matching Agent Card hash');
  const metrics=marketBreadth(assets);
  if(!source||!Number.isFinite(Date.parse(observedAt)))throw new Error('Missing provenance or observation timestamp');
  return {...metrics,source,observedAt,disclaimer:'Illustrative source-attributed top-N sample, not a forecast, trading advice or claim that this verifier owns the sampled agent.'};
